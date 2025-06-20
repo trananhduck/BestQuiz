@@ -339,6 +339,32 @@
         white-space: pre-line;
       }
 
+      /* Notification styles for F5 block */
+      .f5-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ff9800;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        display: none;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
       @media (max-width: 768px) {
         .nav-tabs {
           flex-direction: column;
@@ -356,6 +382,12 @@
     </style>
   </head>
   <body>
+    <!-- Notification for F5 block -->
+    <div id="f5Notification" class="f5-notification">
+      <i class="fas fa-exclamation-triangle"></i>
+      F5 đã bị vô hiệu hóa để bảo vệ dữ liệu của bạn!
+    </div>
+
     <div class="container">
       <div class="header">
         <h1>
@@ -571,8 +603,56 @@
       let userAnswers = [];
       let quizQuestions = [];
 
-      // Khởi tạo
+      // Block F5 refresh functionality
+      function blockF5Refresh() {
+        document.addEventListener("keydown", function (e) {
+          // Block F5 (keyCode 116) and Ctrl+F5 (keyCode 116 + ctrlKey)
+          if (e.keyCode === 116 || (e.ctrlKey && e.keyCode === 116)) {
+            e.preventDefault();
+            e.stopPropagation();
+            showF5Notification();
+            return false;
+          }
+
+          // Block Ctrl+R (Refresh)
+          if (e.ctrlKey && e.keyCode === 82) {
+            e.preventDefault();
+            e.stopPropagation();
+            showF5Notification();
+            return false;
+          }
+        });
+
+        // Block context menu refresh option
+        document.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+          return false;
+        });
+
+        // Block browser back/forward navigation with warning
+        window.addEventListener("beforeunload", function (e) {
+          if (questions.length > 0) {
+            const message =
+              "Bạn có chắc muốn rời khỏi trang? Dữ liệu có thể bị mất.";
+            e.returnValue = message;
+            return message;
+          }
+        });
+      }
+
+      // Show notification when F5 is blocked
+      function showF5Notification() {
+        const notification = document.getElementById("f5Notification");
+        notification.style.display = "block";
+
+        setTimeout(() => {
+          notification.style.display = "none";
+        }, 3000);
+      }
+
+      // Initialize F5 blocking on page load
       document.addEventListener("DOMContentLoaded", function () {
+        blockF5Refresh();
         updateQuestionCount();
         displayQuestions();
 
@@ -708,76 +788,6 @@
       }
 
       // Hiển thị danh sách câu hỏi
-      function displayQuestions() {
-        const questionList = document.getElementById("questionList");
-        questionList.innerHTML = "";
-
-        if (questions.length === 0) {
-          questionList.innerHTML =
-            '<p style="text-align: center; color: #666; padding: 40px;">Chưa có câu hỏi nào. Hãy tạo câu hỏi đầu tiên!</p>';
-          return;
-        }
-
-        questions.forEach((question, index) => {
-          const questionDiv = document.createElement("div");
-          questionDiv.className = "question-item";
-
-          questionDiv.innerHTML = `
-    <button class="delete-btn" onclick="deleteQuestion(${
-      question.id
-    })" title="Xóa câu hỏi">
-      <i class="fas fa-times"></i>
-    </button>
-    <h4>Câu ${index + 1}: ${question.text}</h4>
-    <div class="image-container">
-      ${
-        question.image
-          ? `<img src="${question.image}" class="question-image" alt="Question image">`
-          : ""
-      }
-    </div>
-    ${question.options
-      .map(
-        (option, i) => `
-        <div class="answer-option ${
-          i === question.correctAnswer ? "correct" : ""
-        }">
-          ${String.fromCharCode(65 + i)}. ${option}
-          ${
-            i === question.correctAnswer
-              ? '<i class="fas fa-check" style="color: #4CAF50;"></i>'
-              : ""
-          }
-        </div>
-      `
-      )
-      .join("")}
-    <label class="add-image-label">
-      📷 Thêm hình ảnh
-      <input type="file" class="questionImage" accept="image/*" style="display: none;">
-    </label>
-  `;
-
-          // Thêm sự kiện chọn file ảnh
-          const fileInput = questionDiv.querySelector(".questionImage");
-          const imageContainer = questionDiv.querySelector(".image-container");
-
-          fileInput.addEventListener("change", (event) => {
-            const file = event.target.files[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = function (e) {
-                imageContainer.innerHTML = `<img src="${e.target.result}" class="question-image" alt="Question image">`;
-                // Cập nhật tạm vào question.image (nếu cần dùng lại)
-                question.image = e.target.result;
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-
-          questionList.appendChild(questionDiv);
-        });
-      }
       function displayQuestions() {
         const questionList = document.getElementById("questionList");
         questionList.innerHTML = "";
